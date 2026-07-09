@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+{% block content %}
+<h3>{{ user.nombre }} &middot; {% if user.es_principal %}Tienda 12 (principal){% else %}Panel de tienda{% endif %}</h3>
+
+<div class="row mt-4">
+  <div class="col-md-6">
+    <h5>Stock disponible</h5>
+    <table class="table table-sm table-striped bg-white">
+      <thead><tr><th>SKU</th><th>Producto</th><th>Cantidad</th><th>Precio</th></tr></thead>
+      <tbody>
+        {% for fila in stock %}
+        <tr><td>{{ fila.sku }}</td><td>{{ fila.nombre }}</td><td>{{ fila.cantidad }}</td><td>S/ {{ "%.2f"|format(fila.precio_venta) }}</td></tr>
+        {% else %}
+        <tr><td colspan="4" class="text-muted">Todavía no hay stock en esta tienda.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <h6 class="mt-4">Últimas ventas</h6>
+    <table class="table table-sm bg-white">
+      <thead><tr><th>Fecha</th><th>Total</th></tr></thead>
+      <tbody>
+        {% for v in ultimas_ventas %}
+        <tr><td>{{ v.fecha }}</td><td>S/ {{ "%.2f"|format(v.total) }}</td></tr>
+        {% else %}
+        <tr><td colspan="2" class="text-muted">Sin ventas todavía.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="col-md-6">
+    <h5>Registrar venta</h5>
+    <div class="card p-3 mb-3">
+      <form method="post" action="/tienda/venta" class="row g-2 align-items-end">
+        <div class="col-md-7">
+          <label class="form-label">Producto</label>
+          <select name="producto_id" class="form-select" required>
+            {% for p in productos %}
+            <option value="{{ p.id }}">{{ p.sku }} - {{ p.nombre }} (S/ {{ "%.2f"|format(p.precio_venta) }})</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Cantidad</label>
+          <input type="number" name="cantidad" min="1" class="form-control" required>
+        </div>
+        <div class="col-md-2">
+          <button type="submit" class="btn btn-success w-100">Vender</button>
+        </div>
+      </form>
+    </div>
+
+    <h5>Registrar mercadería recibida</h5>
+    <div class="card p-3 mb-3">
+      <form method="post" action="/tienda/entrada" class="row g-2 align-items-end">
+        <div class="col-md-6">
+          <label class="form-label">Producto</label>
+          <select name="producto_id" class="form-select" required>
+            {% for p in productos %}
+            <option value="{{ p.id }}">{{ p.sku }} - {{ p.nombre }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Cantidad</label>
+          <input type="number" name="cantidad" min="1" class="form-control" required>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Nota (opcional)</label>
+          <input type="text" name="nota" class="form-control" placeholder="Proveedor, guía, etc.">
+        </div>
+        <div class="col-12">
+          <button type="submit" class="btn btn-primary">Registrar entrada</button>
+        </div>
+      </form>
+      <p class="text-muted mt-2 mb-0">Usa esto cuando te llegue mercadería directo de un proveedor (no de Tienda 12).</p>
+    </div>
+
+    {% if user.es_principal %}
+    <h5>Repartir mercadería a otra tienda</h5>
+    <div class="card p-3 mb-3 border-primary">
+      <form method="post" action="/tienda/transferencia" class="row g-2 align-items-end">
+        <div class="col-md-5">
+          <label class="form-label">Producto</label>
+          <select name="producto_id" class="form-select" required>
+            {% for p in productos %}
+            <option value="{{ p.id }}">{{ p.sku }} - {{ p.nombre }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Tienda destino</label>
+          <select name="destino_id" class="form-select" required>
+            {% for t in otras_tiendas %}
+            <option value="{{ t.id }}">{{ t.nombre }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Cantidad</label>
+          <input type="number" name="cantidad" min="1" class="form-control" required>
+        </div>
+        <div class="col-md-2">
+          <button type="submit" class="btn btn-primary w-100">Enviar</button>
+        </div>
+      </form>
+    </div>
+    {% endif %}
+
+    <h5>Ajuste de conteo físico</h5>
+    <div class="card p-3">
+      <form method="post" action="/tienda/ajuste" class="row g-2 align-items-end">
+        <div class="col-md-6">
+          <label class="form-label">Producto</label>
+          <select name="producto_id" class="form-select" required>
+            {% for p in productos %}
+            <option value="{{ p.id }}">{{ p.sku }} - {{ p.nombre }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Cantidad (+/-)</label>
+          <input type="number" name="cantidad" class="form-control" required>
+        </div>
+        <div class="col-md-3">
+          <button type="submit" class="btn btn-secondary w-100">Ajustar</button>
+        </div>
+      </form>
+      <p class="text-muted mt-2 mb-0">Positivo si encontraste más stock del registrado, negativo si encontraste menos.</p>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block content %}
+<h3>Panel del gerente</h3>
+
+<h5 class="mt-4">Ventas de hoy por tienda</h5>
+<table class="table table-sm table-striped bg-white">
+  <thead><tr><th>Tienda</th><th># Ventas</th><th>Total vendido</th></tr></thead>
+  <tbody>
+    {% for fila in ventas_hoy %}
+    <tr><td>{{ fila.ubicacion }}</td><td>{{ fila.num_ventas }}</td><td>S/ {{ "%.2f"|format(fila.total_vendido) }}</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<h5 class="mt-4">Inventario consolidado (todas las ubicaciones)</h5>
+<table class="table table-sm table-striped bg-white">
+  <thead><tr><th>Ubicación</th><th>SKU</th><th>Producto</th><th>Cantidad</th></tr></thead>
+  <tbody>
+    {% for fila in inventario %}
+    <tr><td>{{ fila.ubicacion }}</td><td>{{ fila.sku }}</td><td>{{ fila.producto }}</td><td>{{ fila.cantidad }}</td></tr>
+    {% else %}
+    <tr><td colspan="4" class="text-muted">Todavía no hay inventario registrado.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}
