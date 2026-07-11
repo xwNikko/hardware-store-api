@@ -68,6 +68,22 @@ def tienda_dashboard(request: Request):
         )
         resumen_hoy = cursor.fetchone()
 
+        # Historial: el total de cada día se calcula por separado, no se acumula entre días
+        cursor.execute(
+            """
+            SELECT TOP 30
+                CAST(fecha AS DATE) AS dia,
+                COUNT(*) AS num_ventas,
+                SUM(total) AS total_dia
+            FROM ventas
+            WHERE ubicacion_id = %s
+            GROUP BY CAST(fecha AS DATE)
+            ORDER BY dia DESC
+            """,
+            (user["ubicacion_id"],),
+        )
+        historial_diario = cursor.fetchall()
+
         # Todas las ubicaciones (para elegir punto de recojo al vender)
         cursor.execute("SELECT id, nombre FROM ubicaciones ORDER BY nombre")
         todas_ubicaciones = cursor.fetchall()
@@ -102,6 +118,7 @@ def tienda_dashboard(request: Request):
             "productos": productos,
             "ultimas_ventas": ultimas_ventas,
             "resumen_hoy": resumen_hoy,
+            "historial_diario": historial_diario,
             "todas_ubicaciones": todas_ubicaciones,
             "otras_tiendas": otras_tiendas,
             "notas": notas,

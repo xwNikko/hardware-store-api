@@ -52,6 +52,22 @@ def gerente_dashboard(request: Request):
         )
         notas_pendientes = cursor.fetchall()
 
+        # Historial: cada día se calcula por separado, agrupado también por tienda
+        cursor.execute(
+            """
+            SELECT TOP 60
+                CAST(v.fecha AS DATE) AS dia,
+                u.nombre AS ubicacion,
+                COUNT(*) AS num_ventas,
+                SUM(v.total) AS total_dia
+            FROM ventas v
+            JOIN ubicaciones u ON u.id = v.ubicacion_id
+            GROUP BY CAST(v.fecha AS DATE), u.nombre
+            ORDER BY dia DESC, ubicacion
+            """
+        )
+        historial_diario = cursor.fetchall()
+
     return templates.TemplateResponse(
         request,
         "gerente.html",
@@ -60,5 +76,6 @@ def gerente_dashboard(request: Request):
             "inventario": inventario,
             "ventas_hoy": ventas_hoy,
             "notas_pendientes": notas_pendientes,
+            "historial_diario": historial_diario,
         },
     )

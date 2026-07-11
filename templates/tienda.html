@@ -12,6 +12,21 @@
   <p class="text-muted mb-0">{{ resumen_hoy.num_ventas_hoy }} venta(s) registrada(s) hoy</p>
 </div>
 
+<div class="mb-4">
+  <h5>Historial de ventas por día</h5>
+  <p class="text-muted small mb-2">El total de cada día es independiente (no se suma con otros días). El stock nunca se resetea, sigue acumulado siempre.</p>
+  <table class="table table-sm table-striped bg-white">
+    <thead><tr><th>Día</th><th># Ventas</th><th>Total del día</th></tr></thead>
+    <tbody>
+      {% for h in historial_diario %}
+      <tr><td>{{ h.dia }}</td><td>{{ h.num_ventas }}</td><td>S/ {{ "%.2f"|format(h.total_dia) }}</td></tr>
+      {% else %}
+      <tr><td colspan="3" class="text-muted">Sin historial todavía.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
 <div class="row">
   <div class="col-md-6">
     <h5>Stock disponible</h5>

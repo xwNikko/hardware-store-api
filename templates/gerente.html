@@ -12,6 +12,19 @@
   </tbody>
 </table>
 
+<h5 class="mt-4">Historial de ventas por día y tienda</h5>
+<p class="text-muted small mb-2">El total de cada día es independiente por tienda (no se acumula entre días).</p>
+<table class="table table-sm table-striped bg-white">
+  <thead><tr><th>Día</th><th>Tienda</th><th># Ventas</th><th>Total del día</th></tr></thead>
+  <tbody>
+    {% for h in historial_diario %}
+    <tr><td>{{ h.dia }}</td><td>{{ h.ubicacion }}</td><td>{{ h.num_ventas }}</td><td>S/ {{ "%.2f"|format(h.total_dia) }}</td></tr>
+    {% else %}
+    <tr><td colspan="4" class="text-muted">Sin historial todavía.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+
 <h5 class="mt-4">Notas de faltantes pendientes (para fábrica)</h5>
 <table class="table table-sm table-striped bg-white">
   <thead><tr><th>Tienda</th><th>Descripción</th><th>Cantidad</th><th>Fecha</th></tr></thead>
