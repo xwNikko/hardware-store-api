@@ -45,44 +45,45 @@ def tienda_dashboard(request: Request):
         cursor.execute("SELECT id, sku, nombre, precio_venta FROM productos ORDER BY nombre")
         productos = cursor.fetchall()
 
-        cursor.execute(
-            """
-            SELECT TOP 20 v.id, v.fecha, v.total, v.punto_recojo_id, u.nombre AS punto_recojo
-            FROM ventas v
-            JOIN ubicaciones u ON u.id = v.punto_recojo_id
-            WHERE v.ubicacion_id = %s
-            ORDER BY v.fecha DESC
-            """,
-            (user["ubicacion_id"],),
-        )
-        ultimas_ventas = cursor.fetchall()
-
-        # Total vendido hoy por esta tienda
+        # Total vendido hoy por esta tienda (usando el "hoy" de Perú, no el de UTC)
         cursor.execute(
             """
             SELECT ISNULL(SUM(total), 0) AS total_hoy, COUNT(*) AS num_ventas_hoy
             FROM ventas
-            WHERE ubicacion_id = %s AND CAST(fecha AS DATE) = CAST(GETDATE() AS DATE)
+            WHERE ubicacion_id = %s
+              AND CAST(DATEADD(HOUR, -5, fecha) AS DATE) = CAST(DATEADD(HOUR, -5, GETDATE()) AS DATE)
             """,
             (user["ubicacion_id"],),
         )
         resumen_hoy = cursor.fetchone()
 
-        # Historial: el total de cada día se calcula por separado, no se acumula entre días
+        # Historial: cada venta individual de los últimos 60 días, para armar
+        # las pestañas por día (cada día se calcula por separado).
+        # Las fechas se guardan en UTC; se ajustan a hora de Perú (UTC-5) para mostrarlas.
         cursor.execute(
             """
-            SELECT TOP 30
-                CAST(fecha AS DATE) AS dia,
-                COUNT(*) AS num_ventas,
-                SUM(total) AS total_dia
-            FROM ventas
-            WHERE ubicacion_id = %s
-            GROUP BY CAST(fecha AS DATE)
-            ORDER BY dia DESC
+            SELECT
+                v.id,
+                CAST(DATEADD(HOUR, -5, v.fecha) AS DATE) AS dia,
+                DATEADD(HOUR, -5, v.fecha) AS fecha_local,
+                v.total, v.punto_recojo_id, u.nombre AS punto_recojo
+            FROM ventas v
+            JOIN ubicaciones u ON u.id = v.punto_recojo_id
+            WHERE v.ubicacion_id = %s AND v.fecha >= DATEADD(day, -61, GETDATE())
+            ORDER BY v.fecha DESC
             """,
             (user["ubicacion_id"],),
         )
-        historial_diario = cursor.fetchall()
+        ventas_detalle = cursor.fetchall()
+
+        dias = {}
+        for v in ventas_detalle:
+            clave = str(v["dia"])
+            if clave not in dias:
+                dias[clave] = {"total": 0.0, "num_ventas": 0, "ventas": []}
+            dias[clave]["total"] += float(v["total"])
+            dias[clave]["num_ventas"] += 1
+            dias[clave]["ventas"].append(v)
 
         # Todas las ubicaciones (para elegir punto de recojo al vender)
         cursor.execute("SELECT id, nombre FROM ubicaciones ORDER BY nombre")
@@ -116,9 +117,8 @@ def tienda_dashboard(request: Request):
             "error": error,
             "stock": stock,
             "productos": productos,
-            "ultimas_ventas": ultimas_ventas,
             "resumen_hoy": resumen_hoy,
-            "historial_diario": historial_diario,
+            "dias": dias,
             "todas_ubicaciones": todas_ubicaciones,
             "otras_tiendas": otras_tiendas,
             "notas": notas,

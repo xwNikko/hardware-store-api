@@ -13,18 +13,47 @@
 </div>
 
 <div class="mb-4">
-  <h5>Historial de ventas por día</h5>
-  <p class="text-muted small mb-2">El total de cada día es independiente (no se suma con otros días). El stock nunca se resetea, sigue acumulado siempre.</p>
-  <table class="table table-sm table-striped bg-white">
-    <thead><tr><th>Día</th><th># Ventas</th><th>Total del día</th></tr></thead>
-    <tbody>
-      {% for h in historial_diario %}
-      <tr><td>{{ h.dia }}</td><td>{{ h.num_ventas }}</td><td>S/ {{ "%.2f"|format(h.total_dia) }}</td></tr>
-      {% else %}
-      <tr><td colspan="3" class="text-muted">Sin historial todavía.</td></tr>
-      {% endfor %}
-    </tbody>
-  </table>
+  <h5>Ventas por día</h5>
+  <p class="text-muted small mb-2">Cada pestaña es un día distinto. El total de cada día es independiente (no se suma con otros días).</p>
+
+  {% if dias %}
+  <ul class="nav nav-tabs" role="tablist">
+    {% for fecha, info in dias.items() %}
+    <li class="nav-item" role="presentation">
+      <button class="nav-link {% if loop.first %}active{% endif %}" data-bs-toggle="tab" data-bs-target="#dia-{{ loop.index }}" type="button">
+        {{ fecha }}<br><small class="text-success">S/ {{ "%.2f"|format(info.total) }}</small>
+      </button>
+    </li>
+    {% endfor %}
+  </ul>
+  <div class="tab-content border border-top-0 p-3 bg-white">
+    {% for fecha, info in dias.items() %}
+    <div class="tab-pane fade {% if loop.first %}show active{% endif %}" id="dia-{{ loop.index }}">
+      <p class="mb-2"><strong>Total del {{ fecha }}: S/ {{ "%.2f"|format(info.total) }}</strong> &middot; {{ info.num_ventas }} venta(s)</p>
+      <table class="table table-sm">
+        <thead><tr><th>Hora</th><th>Total</th><th>Recoge en</th></tr></thead>
+        <tbody>
+          {% for v in info.ventas %}
+          <tr>
+            <td>{{ v.fecha_local }}</td>
+            <td>S/ {{ "%.2f"|format(v.total) }}</td>
+            <td>
+              {% if v.punto_recojo_id == user.ubicacion_id %}
+                Aquí mismo
+              {% else %}
+                <span class="badge bg-info text-dark">{{ v.punto_recojo }}</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="text-muted">Todavía no hay ventas registradas.</p>
+  {% endif %}
 </div>
 
 <div class="row">
@@ -37,28 +66,6 @@
         <tr><td>{{ fila.sku }}</td><td>{{ fila.nombre }}</td><td>{{ fila.cantidad }}</td><td>S/ {{ "%.2f"|format(fila.precio_venta) }}</td></tr>
         {% else %}
         <tr><td colspan="4" class="text-muted">Todavía no hay stock en esta tienda.</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
-
-    <h6 class="mt-4">Últimas ventas</h6>
-    <table class="table table-sm bg-white">
-      <thead><tr><th>Fecha</th><th>Total</th><th>Recoge en</th></tr></thead>
-      <tbody>
-        {% for v in ultimas_ventas %}
-        <tr>
-          <td>{{ v.fecha }}</td>
-          <td>S/ {{ "%.2f"|format(v.total) }}</td>
-          <td>
-            {% if v.punto_recojo_id == user.ubicacion_id %}
-              Aquí mismo
-            {% else %}
-              <span class="badge bg-info text-dark">{{ v.punto_recojo }}</span>
-            {% endif %}
-          </td>
-        </tr>
-        {% else %}
-        <tr><td colspan="3" class="text-muted">Sin ventas todavía.</td></tr>
         {% endfor %}
       </tbody>
     </table>

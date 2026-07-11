@@ -35,7 +35,8 @@ def gerente_dashboard(request: Request):
             """
             SELECT u.nombre AS ubicacion, COUNT(v.id) AS num_ventas, ISNULL(SUM(v.total), 0) AS total_vendido
             FROM ubicaciones u
-            LEFT JOIN ventas v ON v.ubicacion_id = u.id AND CAST(v.fecha AS DATE) = CAST(GETDATE() AS DATE)
+            LEFT JOIN ventas v ON v.ubicacion_id = u.id
+                AND CAST(DATEADD(HOUR, -5, v.fecha) AS DATE) = CAST(DATEADD(HOUR, -5, GETDATE()) AS DATE)
             GROUP BY u.nombre
             """
         )
@@ -43,7 +44,7 @@ def gerente_dashboard(request: Request):
 
         cursor.execute(
             """
-            SELECT u.nombre AS ubicacion, n.descripcion, n.cantidad, n.creado_en
+            SELECT u.nombre AS ubicacion, n.descripcion, n.cantidad, DATEADD(HOUR, -5, n.creado_en) AS creado_en
             FROM notas_faltantes n
             JOIN ubicaciones u ON u.id = n.ubicacion_id
             WHERE n.estado = 'pendiente'
@@ -52,17 +53,18 @@ def gerente_dashboard(request: Request):
         )
         notas_pendientes = cursor.fetchall()
 
-        # Historial: cada día se calcula por separado, agrupado también por tienda
+        # Historial: cada día se calcula por separado, agrupado también por tienda.
+        # Fechas ajustadas de UTC a hora de Perú (UTC-5).
         cursor.execute(
             """
             SELECT TOP 60
-                CAST(v.fecha AS DATE) AS dia,
+                CAST(DATEADD(HOUR, -5, v.fecha) AS DATE) AS dia,
                 u.nombre AS ubicacion,
                 COUNT(*) AS num_ventas,
                 SUM(v.total) AS total_dia
             FROM ventas v
             JOIN ubicaciones u ON u.id = v.ubicacion_id
-            GROUP BY CAST(v.fecha AS DATE), u.nombre
+            GROUP BY CAST(DATEADD(HOUR, -5, v.fecha) AS DATE), u.nombre
             ORDER BY dia DESC, ubicacion
             """
         )
