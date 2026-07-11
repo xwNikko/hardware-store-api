@@ -41,8 +41,24 @@ def gerente_dashboard(request: Request):
         )
         ventas_hoy = cursor.fetchall()
 
+        cursor.execute(
+            """
+            SELECT u.nombre AS ubicacion, n.descripcion, n.cantidad, n.creado_en
+            FROM notas_faltantes n
+            JOIN ubicaciones u ON u.id = n.ubicacion_id
+            WHERE n.estado = 'pendiente'
+            ORDER BY n.creado_en DESC
+            """
+        )
+        notas_pendientes = cursor.fetchall()
+
     return templates.TemplateResponse(
         request,
         "gerente.html",
-        {"user": user, "inventario": inventario, "ventas_hoy": ventas_hoy},
+        {
+            "user": user,
+            "inventario": inventario,
+            "ventas_hoy": ventas_hoy,
+            "notas_pendientes": notas_pendientes,
+        },
     )

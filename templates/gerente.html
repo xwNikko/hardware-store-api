@@ -12,6 +12,18 @@
   </tbody>
 </table>
 
+<h5 class="mt-4">Notas de faltantes pendientes (para fábrica)</h5>
+<table class="table table-sm table-striped bg-white">
+  <thead><tr><th>Tienda</th><th>Descripción</th><th>Cantidad</th><th>Fecha</th></tr></thead>
+  <tbody>
+    {% for n in notas_pendientes %}
+    <tr><td>{{ n.ubicacion }}</td><td>{{ n.descripcion }}</td><td>{{ n.cantidad or '-' }}</td><td>{{ n.creado_en }}</td></tr>
+    {% else %}
+    <tr><td colspan="4" class="text-muted">No hay notas pendientes.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+
 <h5 class="mt-4">Inventario consolidado (todas las ubicaciones)</h5>
 <table class="table table-sm table-striped bg-white">
   <thead><tr><th>Ubicación</th><th>SKU</th><th>Producto</th><th>Cantidad</th></tr></thead>
