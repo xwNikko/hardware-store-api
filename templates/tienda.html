@@ -112,32 +112,28 @@
   <div class="col-md-6">
     <h5>Registrar venta</h5>
     <div class="card p-3 mb-3">
-      <form method="post" action="/tienda/venta" class="row g-2 align-items-end">
-        <div class="col-md-5">
-          <label class="form-label">Producto</label>
-          <select name="producto_id" class="form-select" required>
-            {% for p in productos %}
-            <option value="{{ p.id }}">{{ p.sku }} - {{ p.nombre }} (S/ {{ "%.2f"|format(p.precio_venta) }})</option>
-            {% endfor %}
-          </select>
-        </div>
-        <div class="col-md-2">
-          <label class="form-label">Cantidad</label>
-          <input type="number" name="cantidad" min="1" class="form-control" required>
-        </div>
-        <div class="col-md-3">
-          <label class="form-label">Recoge en</label>
-          <select name="punto_recojo_id" class="form-select" required>
-            {% for u in todas_ubicaciones %}
-            <option value="{{ u.id }}" {% if u.id == user.ubicacion_id %}selected{% endif %}>{{ u.nombre }}</option>
-            {% endfor %}
-          </select>
-        </div>
-        <div class="col-md-2">
-          <button type="submit" class="btn btn-success w-100">Vender</button>
+      <form method="post" action="/tienda/venta" id="form-venta">
+        <div id="carrito-items"></div>
+        <button type="button" class="btn btn-outline-secondary btn-sm mb-3" onclick="agregarFilaCarrito()">+ Agregar otro producto</button>
+        <div class="row g-2 align-items-end">
+          <div class="col-md-5">
+            <label class="form-label">Recoge en</label>
+            <select name="punto_recojo_id" class="form-select" required>
+              {% for u in todas_ubicaciones %}
+              <option value="{{ u.id }}" {% if u.id == user.ubicacion_id %}selected{% endif %}>{{ u.nombre }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-4">
+            <span class="text-muted">Total:</span>
+            <strong class="fs-5">S/ <span id="total-carrito">0.00</span></strong>
+          </div>
+          <div class="col-md-3">
+            <button type="submit" class="btn btn-success w-100">Vender</button>
+          </div>
         </div>
       </form>
-      <p class="text-muted mt-2 mb-0">Si el cliente paga aquí pero recoge en otra tienda, cambia "Recoge en".</p>
+      <p class="text-muted mt-2 mb-0">Puedes agregar varios productos a una misma boleta. Si el cliente paga aquí pero recoge en otra tienda, cambia "Recoge en".</p>
     </div>
 
     <h5>Registrar mercadería recibida</h5>
@@ -248,4 +244,59 @@
     </div>
   </div>
 </div>
+
+<script>
+  const productosData = [
+    {% for p in productos %}
+    { id: {{ p.id }}, label: {{ (p.sku ~ " - " ~ p.nombre)|tojson }}, precio: {{ p.precio_venta }} },
+    {% endfor %}
+  ];
+
+  function opcionesProductos() {
+    return productosData.map(p => `<option value="${p.id}" data-precio="${p.precio}">${p.label}</option>`).join('');
+  }
+
+  function agregarFilaCarrito() {
+    const cont = document.getElementById('carrito-items');
+    const div = document.createElement('div');
+    div.className = 'row g-2 align-items-end mb-2 fila-carrito';
+    div.innerHTML = `
+      <div class="col-md-6">
+        <select name="producto_id[]" class="form-select producto-select" onchange="actualizarTotalCarrito()" required>
+          ${opcionesProductos()}
+        </select>
+      </div>
+      <div class="col-md-3">
+        <input type="number" name="cantidad[]" min="1" class="form-control cantidad-input" placeholder="Cantidad" oninput="actualizarTotalCarrito()" required>
+      </div>
+      <div class="col-md-3">
+        <button type="button" class="btn btn-outline-danger btn-sm w-100" onclick="quitarFilaCarrito(this)">Quitar</button>
+      </div>
+    `;
+    cont.appendChild(div);
+    actualizarTotalCarrito();
+  }
+
+  function quitarFilaCarrito(boton) {
+    const filas = document.querySelectorAll('.fila-carrito');
+    if (filas.length <= 1) return; // siempre debe quedar al menos una fila
+    boton.closest('.fila-carrito').remove();
+    actualizarTotalCarrito();
+  }
+
+  function actualizarTotalCarrito() {
+    let total = 0;
+    document.querySelectorAll('.fila-carrito').forEach(fila => {
+      const select = fila.querySelector('.producto-select');
+      const cantidad = parseFloat(fila.querySelector('.cantidad-input').value) || 0;
+      const opcion = select.options[select.selectedIndex];
+      const precio = opcion ? parseFloat(opcion.dataset.precio) : 0;
+      total += precio * cantidad;
+    });
+    document.getElementById('total-carrito').textContent = total.toFixed(2);
+  }
+
+  // Empieza siempre con una fila lista para usar
+  agregarFilaCarrito();
+</script>
 {% endblock %}

@@ -127,23 +127,36 @@ def tienda_dashboard(request: Request):
 
 
 @router.post("/tienda/venta")
-def registrar_venta(
-    request: Request,
-    producto_id: int = Form(...),
-    cantidad: int = Form(...),
-    punto_recojo_id: int = Form(...),
-):
+async def registrar_venta(request: Request):
     user = get_logged_user(request)
     if not user or user["rol"] != "tienda":
         return no_autorizado()
+
+    form = await request.form()
+    punto_recojo_id = int(form.get("punto_recojo_id"))
+    producto_ids = form.getlist("producto_id[]")
+    cantidades = form.getlist("cantidad[]")
+
+    items = []
+    for pid, cant in zip(producto_ids, cantidades):
+        if pid and cant:
+            items.append((int(pid), int(cant)))
+
+    if not items:
+        set_flash(request, "Agrega al menos un producto antes de vender.")
+        return RedirectResponse("/tienda", status_code=303)
 
     try:
         with get_db() as conn:
             cursor = conn.cursor(as_dict=True)
 
-            cursor.execute("SELECT precio_venta FROM productos WHERE id = %s", (producto_id,))
-            precio_unitario = cursor.fetchone()["precio_venta"]
-            total = float(precio_unitario) * cantidad
+            total = 0.0
+            detalles = []
+            for producto_id, cantidad in items:
+                cursor.execute("SELECT precio_venta FROM productos WHERE id = %s", (producto_id,))
+                precio_unitario = cursor.fetchone()["precio_venta"]
+                total += float(precio_unitario) * cantidad
+                detalles.append((producto_id, cantidad, precio_unitario))
 
             cursor.execute(
                 """
@@ -154,13 +167,14 @@ def registrar_venta(
             )
             venta_id = cursor.fetchone()["id"]
 
-            cursor.execute(
-                """
-                INSERT INTO venta_detalle (venta_id, producto_id, cantidad, precio_unitario)
-                VALUES (%s, %s, %s, %s)
-                """,
-                (venta_id, producto_id, cantidad, precio_unitario),
-            )
+            for producto_id, cantidad, precio_unitario in detalles:
+                cursor.execute(
+                    """
+                    INSERT INTO venta_detalle (venta_id, producto_id, cantidad, precio_unitario)
+                    VALUES (%s, %s, %s, %s)
+                    """,
+                    (venta_id, producto_id, cantidad, precio_unitario),
+                )
     except Exception as e:
         set_flash(request, mensaje_amigable(e))
 
