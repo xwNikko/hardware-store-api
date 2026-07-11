@@ -20,12 +20,12 @@ def main():
     ubicacion_id = None
     if rol == "tienda":
         with get_db() as conn:
-            cursor = conn.cursor()
+            cursor = conn.cursor(as_dict=True)
             cursor.execute("SELECT id, nombre, es_principal FROM ubicaciones ORDER BY id")
             print("\nUbicaciones disponibles:")
             for row in cursor.fetchall():
-                etiqueta = " (principal)" if row.es_principal else ""
-                print(f"  {row.id} - {row.nombre}{etiqueta}")
+                etiqueta = " (principal)" if row["es_principal"] else ""
+                print(f"  {row['id']} - {row['nombre']}{etiqueta}")
         ubicacion_id = int(input("ID de la ubicación de este usuario: ").strip())
 
     password_hash = hash_password(password)
@@ -35,9 +35,9 @@ def main():
         cursor.execute(
             """
             INSERT INTO usuarios (nombre, email, password_hash, rol, ubicacion_id)
-            VALUES (?, ?, ?, ?, ?)
+            VALUES (%s, %s, %s, %s, %s)
             """,
-            nombre, email, password_hash, rol, ubicacion_id,
+            (nombre, email, password_hash, rol, ubicacion_id),
         )
 
     print(f"\nUsuario '{email}' creado con éxito. Rol: {rol}.")

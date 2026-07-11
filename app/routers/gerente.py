@@ -18,7 +18,7 @@ def gerente_dashboard(request: Request):
         return no_autorizado()
 
     with get_db() as conn:
-        cursor = conn.cursor()
+        cursor = conn.cursor(as_dict=True)
 
         cursor.execute(
             """

@@ -22,19 +22,19 @@ def login_form(request: Request):
 @router.post("/login")
 def login(request: Request, email: str = Form(...), password: str = Form(...)):
     with get_db() as conn:
-        cursor = conn.cursor()
+        cursor = conn.cursor(as_dict=True)
         cursor.execute(
             """
             SELECT u.id, u.nombre, u.password_hash, u.rol, u.ubicacion_id, ub.es_principal
             FROM usuarios u
             LEFT JOIN ubicaciones ub ON ub.id = u.ubicacion_id
-            WHERE u.email = ?
+            WHERE u.email = %s
             """,
-            email,
+            (email,),
         )
         row = cursor.fetchone()
 
-    if not row or not verify_password(password, row.password_hash):
+    if not row or not verify_password(password, row["password_hash"]):
         return templates.TemplateResponse(
             request,
             "login.html",
@@ -42,14 +42,14 @@ def login(request: Request, email: str = Form(...), password: str = Form(...)):
         )
 
     request.session["user"] = {
-        "id": row.id,
-        "nombre": row.nombre,
-        "rol": row.rol,
-        "ubicacion_id": row.ubicacion_id,
-        "es_principal": bool(row.es_principal) if row.es_principal is not None else False,
+        "id": row["id"],
+        "nombre": row["nombre"],
+        "rol": row["rol"],
+        "ubicacion_id": row["ubicacion_id"],
+        "es_principal": bool(row["es_principal"]) if row["es_principal"] is not None else False,
     }
 
-    return RedirectResponse(DESTINO_POR_ROL[row.rol], status_code=303)
+    return RedirectResponse(DESTINO_POR_ROL[row["rol"]], status_code=303)
 
 
 @router.get("/logout")

@@ -1,7 +1,8 @@
 fastapi
 uvicorn[standard]
-pyodbc
+pymssql
 passlib[bcrypt]
+bcrypt==4.0.1
 python-multipart
 jinja2
 itsdangerous

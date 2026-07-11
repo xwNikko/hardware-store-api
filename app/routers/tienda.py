@@ -1,5 +1,3 @@
-from typing import Optional
-
 from fastapi import APIRouter, Request, Form
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
@@ -20,17 +18,17 @@ def tienda_dashboard(request: Request):
         return no_autorizado()
 
     with get_db() as conn:
-        cursor = conn.cursor()
+        cursor = conn.cursor(as_dict=True)
 
         cursor.execute(
             """
             SELECT p.sku, p.nombre, i.cantidad, p.precio_venta
             FROM inventario i
             JOIN productos p ON p.id = i.producto_id
-            WHERE i.ubicacion_id = ?
+            WHERE i.ubicacion_id = %s
             ORDER BY p.nombre
             """,
-            user["ubicacion_id"],
+            (user["ubicacion_id"],),
         )
         stock = cursor.fetchall()
 
@@ -41,18 +39,18 @@ def tienda_dashboard(request: Request):
             """
             SELECT TOP 20 v.id, v.fecha, v.total
             FROM ventas v
-            WHERE v.ubicacion_id = ?
+            WHERE v.ubicacion_id = %s
             ORDER BY v.fecha DESC
             """,
-            user["ubicacion_id"],
+            (user["ubicacion_id"],),
         )
         ultimas_ventas = cursor.fetchall()
 
         otras_tiendas = []
         if user["es_principal"]:
             cursor.execute(
-                "SELECT id, nombre FROM ubicaciones WHERE id <> ? ORDER BY nombre",
-                user["ubicacion_id"],
+                "SELECT id, nombre FROM ubicaciones WHERE id <> %s ORDER BY nombre",
+                (user["ubicacion_id"],),
             )
             otras_tiendas = cursor.fetchall()
 
@@ -76,24 +74,24 @@ def registrar_venta(request: Request, producto_id: int = Form(...), cantidad: in
         return no_autorizado()
 
     with get_db() as conn:
-        cursor = conn.cursor()
+        cursor = conn.cursor(as_dict=True)
 
-        cursor.execute("SELECT precio_venta FROM productos WHERE id = ?", producto_id)
-        precio_unitario = cursor.fetchone().precio_venta
+        cursor.execute("SELECT precio_venta FROM productos WHERE id = %s", (producto_id,))
+        precio_unitario = cursor.fetchone()["precio_venta"]
         total = float(precio_unitario) * cantidad
 
         cursor.execute(
-            "INSERT INTO ventas (ubicacion_id, usuario_id, total) OUTPUT INSERTED.id VALUES (?, ?, ?)",
-            user["ubicacion_id"], user["id"], total,
+            "INSERT INTO ventas (ubicacion_id, usuario_id, total) OUTPUT INSERTED.id VALUES (%s, %s, %s)",
+            (user["ubicacion_id"], user["id"], total),
         )
-        venta_id = cursor.fetchone().id
+        venta_id = cursor.fetchone()["id"]
 
         cursor.execute(
             """
             INSERT INTO venta_detalle (venta_id, producto_id, cantidad, precio_unitario)
-            VALUES (?, ?, ?, ?)
+            VALUES (%s, %s, %s, %s)
             """,
-            venta_id, producto_id, cantidad, precio_unitario,
+            (venta_id, producto_id, cantidad, precio_unitario),
         )
 
     return RedirectResponse("/tienda", status_code=303)
@@ -106,7 +104,6 @@ def registrar_entrada(
     cantidad: int = Form(...),
     nota: str = Form(""),
 ):
-    """Mercadería que le llega a esta tienda directamente de un proveedor (no es transferencia)."""
     user = get_logged_user(request)
     if not user or user["rol"] != "tienda":
         return no_autorizado()
@@ -116,9 +113,9 @@ def registrar_entrada(
         cursor.execute(
             """
             INSERT INTO movimientos (producto_id, tipo, origen_id, destino_id, cantidad, usuario_id, nota)
-            VALUES (?, 'entrada', NULL, ?, ?, ?, ?)
+            VALUES (%s, 'entrada', NULL, %s, %s, %s, %s)
             """,
-            producto_id, user["ubicacion_id"], cantidad, user["id"], nota,
+            (producto_id, user["ubicacion_id"], cantidad, user["id"], nota),
         )
 
     return RedirectResponse("/tienda", status_code=303)
@@ -132,7 +129,6 @@ def registrar_transferencia(
     cantidad: int = Form(...),
     nota: str = Form(""),
 ):
-    """Solo la tienda principal (Tienda 12) reparte mercadería a las demás."""
     user = get_logged_user(request)
     if not user or user["rol"] != "tienda":
         return no_autorizado()
@@ -144,9 +140,9 @@ def registrar_transferencia(
         cursor.execute(
             """
             INSERT INTO movimientos (producto_id, tipo, origen_id, destino_id, cantidad, usuario_id, nota)
-            VALUES (?, 'transferencia', ?, ?, ?, ?, ?)
+            VALUES (%s, 'transferencia', %s, %s, %s, %s, %s)
             """,
-            producto_id, user["ubicacion_id"], destino_id, cantidad, user["id"], nota,
+            (producto_id, user["ubicacion_id"], destino_id, cantidad, user["id"], nota),
         )
 
     return RedirectResponse("/tienda", status_code=303)
@@ -159,7 +155,6 @@ def registrar_ajuste(
     cantidad: int = Form(...),
     nota: str = Form(""),
 ):
-    """Ajuste de conteo físico: cantidad puede ser positiva o negativa."""
     user = get_logged_user(request)
     if not user or user["rol"] != "tienda":
         return no_autorizado()
@@ -169,9 +164,9 @@ def registrar_ajuste(
         cursor.execute(
             """
             INSERT INTO movimientos (producto_id, tipo, origen_id, destino_id, cantidad, usuario_id, nota)
-            VALUES (?, 'ajuste', NULL, ?, ?, ?, ?)
+            VALUES (%s, 'ajuste', NULL, %s, %s, %s, %s)
             """,
-            producto_id, user["ubicacion_id"], cantidad, user["id"], nota,
+            (producto_id, user["ubicacion_id"], cantidad, user["id"], nota),
         )
 
     return RedirectResponse("/tienda", status_code=303)
