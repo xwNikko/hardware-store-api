@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Boleta #{{ "%05d"|format(venta.id) }}</title>
+    <style>
+        body {
+            font-family: 'Courier New', Courier, monospace;
+            max-width: 320px;
+            margin: 24px auto;
+            color: #222;
+            font-size: 14px;
+        }
+        h2 { text-align: center; margin: 0 0 4px 0; }
+        .center { text-align: center; }
+        .muted { color: #666; font-size: 12px; }
+        hr { border: none; border-top: 1px dashed #999; margin: 10px 0; }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        th { text-align: left; border-bottom: 1px solid #333; padding-bottom: 4px; }
+        td { padding: 3px 0; vertical-align: top; }
+        .right { text-align: right; }
+        .total-row { font-size: 17px; font-weight: bold; }
+        .btn-imprimir {
+            display: block;
+            width: 100%;
+            margin-top: 24px;
+            padding: 12px;
+            background: #198754;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 15px;
+            cursor: pointer;
+        }
+        @media print {
+            .btn-imprimir { display: none; }
+            body { margin: 0; }
+        }
+    </style>
+</head>
+<body>
+    <h2 class="center">Ferretería</h2>
+    <p class="center muted">{{ venta.tienda_venta }}</p>
+    <hr>
+    <p>
+        Boleta N&deg; {{ "%05d"|format(venta.id) }}<br>
+        Fecha: {{ venta.fecha_local }}
+        {% if venta.tienda_venta != venta.tienda_recojo %}
+        <br>Recoge en: {{ venta.tienda_recojo }}
+        {% endif %}
+    </p>
+    <hr>
+    <table>
+        <thead>
+            <tr>
+                <th>Producto</th>
+                <th class="right">Cant.</th>
+                <th class="right">P. Unit.</th>
+                <th class="right">Subtotal</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for it in items %}
+            <tr>
+                <td>{{ it.nombre }}</td>
+                <td class="right">{{ it.cantidad }}</td>
+                <td class="right">{{ "%.2f"|format(it.precio_unitario) }}</td>
+                <td class="right">{{ "%.2f"|format(it.subtotal) }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <hr>
+    <p class="right total-row">TOTAL: S/ {{ "%.2f"|format(venta.total) }}</p>
+    <hr>
+    <p class="center muted">¡Gracias por su compra!</p>
+
+    <button class="btn-imprimir" onclick="window.print()">Imprimir boleta</button>
+</body>
+</html>

@@ -181,6 +181,52 @@ async def registrar_venta(request: Request):
     return RedirectResponse("/tienda", status_code=303)
 
 
+@router.get("/tienda/venta/{venta_id}/boleta")
+def ver_boleta(request: Request, venta_id: int):
+    user = get_logged_user(request)
+    if not user:
+        return RedirectResponse("/login", status_code=303)
+    if user["rol"] not in ("tienda", "gerente"):
+        return no_autorizado()
+
+    with get_db() as conn:
+        cursor = conn.cursor(as_dict=True)
+
+        cursor.execute(
+            """
+            SELECT v.id, v.ubicacion_id, DATEADD(HOUR, -5, v.fecha) AS fecha_local, v.total,
+                   u_venta.nombre AS tienda_venta, u_recojo.nombre AS tienda_recojo
+            FROM ventas v
+            JOIN ubicaciones u_venta ON u_venta.id = v.ubicacion_id
+            JOIN ubicaciones u_recojo ON u_recojo.id = v.punto_recojo_id
+            WHERE v.id = %s
+            """,
+            (venta_id,),
+        )
+        venta = cursor.fetchone()
+
+        if not venta:
+            return no_autorizado()
+
+        # una tienda solo puede ver boletas de sus propias ventas; el gerente ve todas
+        if user["rol"] == "tienda" and venta["ubicacion_id"] != user["ubicacion_id"]:
+            return no_autorizado()
+
+        cursor.execute(
+            """
+            SELECT p.sku, p.nombre, d.cantidad, d.precio_unitario,
+                   (d.cantidad * d.precio_unitario) AS subtotal
+            FROM venta_detalle d
+            JOIN productos p ON p.id = d.producto_id
+            WHERE d.venta_id = %s
+            """,
+            (venta_id,),
+        )
+        items = cursor.fetchall()
+
+    return templates.TemplateResponse(request, "boleta.html", {"venta": venta, "items": items})
+
+
 @router.post("/tienda/entrada")
 def registrar_entrada(
     request: Request,
